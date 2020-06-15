@@ -6,9 +6,13 @@ import tensorflow as tf
 def suppress_tf_warning():
     import tensorflow as tf
     import os
+    import logging
+    from tensorflow.python.util import deprecation
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
     # tf.logging.set_verbosity(tf.logging.ERROR)
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+    logging.getLogger('tensorflow').disabled = True
+    deprecation._PRINT_DEPRECATION_WARNINGS = False
     
 
 class ReplayBuffer:
@@ -40,3 +44,8 @@ class ReplayBuffer:
                     rews=self.rews_buf[idxs],
                     done=self.done_buf[idxs])
         
+def gpu_sess():
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    sess = tf.Session(config=config)
+    return sess
