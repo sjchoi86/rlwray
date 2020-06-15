@@ -1,2 +1,3 @@
-# rlwray
-Reinforcement Learning with RAY
+# Reinforcement Learning with RAY
+
+- Synchronous Soft Actor Critic 
