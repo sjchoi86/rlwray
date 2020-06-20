@@ -169,4 +169,3 @@ def get_action(model,sess,o,deterministic=False):
     act_op = model['mu'] if deterministic else model['pi']
     return sess.run(act_op, feed_dict={model['o_ph']:o.reshape(1,-1)})[0]
 
-print ("SAC model ready.")
