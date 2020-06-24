@@ -1,4 +1,4 @@
-import os
+import os,time
 import numpy as np
 import tensorflow as tf
 
@@ -49,3 +49,18 @@ def gpu_sess():
     config.gpu_options.allow_growth = True
     sess = tf.Session(config=config)
     return sess
+
+t_start_tictoc = time.time()
+def tic():
+    global t_start_tictoc
+    t_start_tictoc = time.time()
+    
+def toc(toc_str=None):
+    global t_start_tictoc
+    t_elapsed_sec = time.time() - t_start_tictoc
+    if toc_str is None:
+        print ("Elapsed time is [%.4f]sec."%
+        (t_elapsed_sec))
+    else:
+        print ("[%s] Elapsed time is [%.4f]sec."%
+        (toc_str,t_elapsed_sec))
