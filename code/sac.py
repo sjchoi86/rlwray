@@ -30,6 +30,23 @@ class ReplayBuffer:
                     rews=self.rews_buf[idxs],
                     done=self.done_buf[idxs])
         
+    def get(self):
+        names = ['obs1_buf','obs2_buf','acts_buf','rews_buf','done_buf',
+                 'ptr','size','max_size']
+        vals =[self.obs1_buf,self.obs2_buf,self.acts_buf,self.rews_buf,self.done_buf,
+               self.ptr,self.size,self.max_size]
+        return names,vals
+
+    def restore(self,a):
+        self.obs1_buf = a[0]
+        self.obs2_buf = a[1]
+        self.acts_buf = a[2]
+        self.rews_buf = a[3]
+        self.done_buf = a[4]
+        self.ptr = a[5]
+        self.size = a[6]
+        self.max_size = a[7]
+        
 def create_sac_model(odim=10,adim=2,hdims=[256,256]):
     """
     Soft Actor Critic Model (compatible with Ray)
@@ -169,3 +186,70 @@ def get_action(model,sess,o,deterministic=False):
     act_op = model['mu'] if deterministic else model['pi']
     return sess.run(act_op, feed_dict={model['o_ph']:o.reshape(1,-1)})[0]
 
+
+def save_sac_model_and_buffers(npz_path,R,replay_buffer_long,replay_buffer_short,VERBOSE=True):
+    """
+    Save SAC model weights and replay buffers
+    """
+    
+    # SAC model
+    tf_vars = R.model['main_vars'] + R.model['target_vars']
+    data2save,var_names,var_vals = dict(),[],[]
+    for v_idx,tf_var in enumerate(tf_vars):
+        var_name,var_val = tf_var.name,R.sess.run(tf_var)
+        var_names.append(var_name)
+        var_vals.append(var_val)
+        data2save[var_name] = var_val
+        if VERBOSE:
+            print ("[%02d]  var_name:[%s]  var_shape:%s"%
+                (v_idx,var_name,var_val.shape,)) 
+            
+    # Buffers
+    names_long,vals_long = replay_buffer_long.get()
+    names_short,vals_short = replay_buffer_short.get()
+    for name,val in zip(names_long,vals_long):
+        data2save[name+'_long'] = val
+    for name,val in zip(names_short,vals_short):
+        data2save[name+'_short'] = val
+    
+    # Create folder if not exist
+    dir_name = os.path.dirname(npz_path)
+    if not os.path.exists(dir_name):
+        os.makedirs(dir_name)
+        print ("[%s] created."%(dir_name))
+        
+    # Save npz
+    np.savez(npz_path,**data2save)
+    print ("[%s] saved."%(npz_path))
+            
+            
+def restore_sac_model_and_buffers(npz_path,R,replay_buffer_long,replay_buffer_short,VERBOSE=True):
+    """
+    Restore SAC model weights and replay buffers
+    """
+    
+    # Load npz
+    l = np.load(npz_path)
+    print ("[%s] loaded."%(npz_path))
+    
+    # Get values of SAC model  
+    tf_vars = R.model['main_vars'] + R.model['target_vars']
+    var_vals = []
+    for tf_var in tf_vars:
+        var_vals.append(l[tf_var.name])   
+        
+    # Assign weights of SAC model
+    R.set_weights(var_vals)
+    
+    # Restore buffers
+    buffer_names,_ = replay_buffer_long.get()
+    a = []
+    for buffer_name in buffer_names:
+        a.append(l[buffer_name+'_long'])
+    replay_buffer_long.restore(a)
+    a = []
+    for buffer_name in buffer_names:
+        a.append(l[buffer_name+'_short'])
+    replay_buffer_short.restore(a)
+    
+    
