@@ -47,7 +47,7 @@ class ReplayBuffer:
         self.size = a[6]
         self.max_size = a[7]
         
-def create_sac_model(odim=10,adim=2,hdims=[256,256]):
+def create_sac_model(odim=10,adim=2,hdims=[256,256],actv=tf.nn.relu):
     """
     Soft Actor Critic Model (compatible with Ray)
     """
@@ -111,7 +111,7 @@ def create_sac_model(odim=10,adim=2,hdims=[256,256]):
     # Placeholders
     o_ph,a_ph,o2_ph,r_ph,d_ph = placeholders(odim,adim,odim,None,None)
     # Actor critic 
-    ac_kwargs = {'hdims':hdims,'actv':tf.nn.relu,'out_actv':None,'policy':mlp_gaussian_policy}
+    ac_kwargs = {'hdims':hdims,'actv':actv,'out_actv':None,'policy':mlp_gaussian_policy}
     with tf.variable_scope('main'):
         mu,pi,logp_pi,q1,q2 = mlp_actor_critic(o=o_ph,a=a_ph,**ac_kwargs)
     with tf.variable_scope('main',reuse=True):
