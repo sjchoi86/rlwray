@@ -187,7 +187,8 @@ def get_action(model,sess,o,deterministic=False):
     return sess.run(act_op, feed_dict={model['o_ph']:o.reshape(1,-1)})[0]
 
 
-def save_sac_model_and_buffers(npz_path,R,replay_buffer_long,replay_buffer_short,VERBOSE=True):
+def save_sac_model_and_buffers(npz_path,R,replay_buffer_long,replay_buffer_short,
+                               VERBOSE=True,IGNORE_BUFFERS=False):
     """
     Save SAC model weights and replay buffers
     """
@@ -205,12 +206,13 @@ def save_sac_model_and_buffers(npz_path,R,replay_buffer_long,replay_buffer_short
                 (v_idx,var_name,var_val.shape,)) 
             
     # Buffers
-    names_long,vals_long = replay_buffer_long.get()
-    names_short,vals_short = replay_buffer_short.get()
-    for name,val in zip(names_long,vals_long):
-        data2save[name+'_long'] = val
-    for name,val in zip(names_short,vals_short):
-        data2save[name+'_short'] = val
+    if IGNORE_BUFFERS is False:
+        names_long,vals_long = replay_buffer_long.get()
+        names_short,vals_short = replay_buffer_short.get()
+        for name,val in zip(names_long,vals_long):
+            data2save[name+'_long'] = val
+        for name,val in zip(names_short,vals_short):
+            data2save[name+'_short'] = val
     
     # Create folder if not exist
     dir_name = os.path.dirname(npz_path)
