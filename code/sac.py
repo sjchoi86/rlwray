@@ -225,7 +225,8 @@ def save_sac_model_and_buffers(npz_path,R,replay_buffer_long,replay_buffer_short
     print ("[%s] saved."%(npz_path))
             
             
-def restore_sac_model_and_buffers(npz_path,R,replay_buffer_long,replay_buffer_short,VERBOSE=True):
+def restore_sac_model_and_buffers(npz_path,R,replay_buffer_long,replay_buffer_short,
+                                  VERBOSE=True,IGNORE_BUFFERS=False):
     """
     Restore SAC model weights and replay buffers
     """
@@ -244,14 +245,15 @@ def restore_sac_model_and_buffers(npz_path,R,replay_buffer_long,replay_buffer_sh
     R.set_weights(var_vals)
     
     # Restore buffers
-    buffer_names,_ = replay_buffer_long.get()
-    a = []
-    for buffer_name in buffer_names:
-        a.append(l[buffer_name+'_long'])
-    replay_buffer_long.restore(a)
-    a = []
-    for buffer_name in buffer_names:
-        a.append(l[buffer_name+'_short'])
-    replay_buffer_short.restore(a)
+    if IGNORE_BUFFERS is False:
+        buffer_names,_ = replay_buffer_long.get()
+        a = []
+        for buffer_name in buffer_names:
+            a.append(l[buffer_name+'_long'])
+        replay_buffer_long.restore(a)
+        a = []
+        for buffer_name in buffer_names:
+            a.append(l[buffer_name+'_short'])
+        replay_buffer_short.restore(a)
     
     
