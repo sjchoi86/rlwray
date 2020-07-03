@@ -110,7 +110,7 @@ class PPOBuffer:
         return [self.obs_buf, self.act_buf, self.adv_buf, 
                 self.ret_buf, self.logp_buf]
         
-def create_ppo_model(env=None,hdims=[256,256]):
+def create_ppo_model(env=None,hdims=[256,256],output_actv=None):
     """
     Create PPO Actor-Critic Model (compatible with Ray)
     """
@@ -203,7 +203,7 @@ def create_ppo_model(env=None,hdims=[256,256]):
              'all_phs':all_phs,'get_action_ops':get_action_ops,'pi_vars':pi_vars,'v_vars':v_vars}
     return model,sess
 
-def create_ppo_graph(model,clip_ratio=0.2,pi_lr=3e-4,vf_lr=1e-3):
+def create_ppo_graph(model,clip_ratio=0.2,pi_lr=3e-4,vf_lr=1e-3,epsilon=1e-2):
     """
     Create PPO Graph
     """
@@ -221,8 +221,9 @@ def create_ppo_graph(model,clip_ratio=0.2,pi_lr=3e-4,vf_lr=1e-3):
     clipfrac = tf.reduce_mean(tf.cast(clipped, tf.float32))
     
     # Optimizers
-    train_pi = tf.train.AdamOptimizer(learning_rate=pi_lr).minimize(pi_loss)
-    train_v = tf.train.AdamOptimizer(learning_rate=vf_lr).minimize(v_loss)
+    pi_ent_loss = pi_loss - 0.01 * approx_ent # entropy-reg policy loss 
+    train_pi = tf.train.AdamOptimizer(learning_rate=pi_lr,epsilon=epsilon).minimize(pi_ent_loss)
+    train_v = tf.train.AdamOptimizer(learning_rate=vf_lr,epsilon=epsilon).minimize(v_loss)
     
     # Accumulate graph
     graph = {'pi_loss':pi_loss,'v_loss':v_loss,'approx_kl':approx_kl,'approx_ent':approx_ent,
