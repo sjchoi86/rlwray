@@ -134,7 +134,7 @@ def create_sac_model(odim=10,adim=2,hdims=[256,256],actv=tf.nn.relu):
         
     return model,sess
 
-def create_sac_graph(model,lr=1e-3,gamma=0.98,alpha=0.1,polyak=0.995):
+def create_sac_graph(model,lr=1e-3,gamma=0.98,alpha=0.1,polyak=0.995,epsilon=1e-2):
     """
     SAC Computational Graph
     """
@@ -155,11 +155,11 @@ def create_sac_graph(model,lr=1e-3,gamma=0.98,alpha=0.1,polyak=0.995):
     value_loss = q1_loss + q2_loss
     
     # Policy train op
-    pi_optimizer = tf.train.AdamOptimizer(learning_rate=lr)
+    pi_optimizer = tf.train.AdamOptimizer(learning_rate=lr,epsilon=epsilon)
     train_pi_op = pi_optimizer.minimize(pi_loss,var_list=model['pi_vars'])
     
     # Value train op 
-    value_optimizer = tf.train.AdamOptimizer(learning_rate=lr)
+    value_optimizer = tf.train.AdamOptimizer(learning_rate=lr,epsilon=epsilon)
     with tf.control_dependencies([train_pi_op]):
         train_value_op = value_optimizer.minimize(value_loss,var_list=model['q_vars'])
         
