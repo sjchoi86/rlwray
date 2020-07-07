@@ -64,3 +64,22 @@ def toc(toc_str=None):
     else:
         print ("[%s] Elapsed time is [%.4f]sec."%
         (toc_str,t_elapsed_sec))
+        
+def open_txt(txt_path):
+    f = open(txt_path,'w') # Open txt file
+    return f
+        
+def write_txt(f,chars,ADD_NEWLINE=True,DO_PRINT=True):
+    """
+    Write to a text file 
+    """
+    if ADD_NEWLINE:
+        f.write(chars+'\n')
+    else: 
+        f.write(chars)
+        
+    f.flush()
+    os.fsync(f.fileno()) # Write to txt
+    
+    if DO_PRINT:
+        print (chars)
