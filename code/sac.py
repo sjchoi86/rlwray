@@ -134,7 +134,7 @@ def create_sac_model(odim=10,adim=2,hdims=[256,256],actv=tf.nn.relu):
         
     return model,sess
 
-def create_sac_graph(model,lr=1e-3,gamma=0.98,alpha=0.1,polyak=0.995,epsilon=1e-2):
+def create_sac_graph(model,lr=1e-3,gamma=0.98,alpha_q=0.1,alpha_pi=0.1,polyak=0.995,epsilon=1e-2):
     """
     SAC Computational Graph
     """
@@ -145,11 +145,11 @@ def create_sac_graph(model,lr=1e-3,gamma=0.98,alpha=0.1,polyak=0.995,epsilon=1e-
     # Entropy-regularized Bellman backup
     q_backup = tf.stop_gradient(
         model['r_ph'] + 
-        gamma*(1-model['d_ph'])*(min_q_targ - alpha*model['logp_pi_next'])
+        gamma*(1-model['d_ph'])*(min_q_targ - alpha_q*model['logp_pi_next'])
     )
     
     # Soft actor-critic losses
-    pi_loss = tf.reduce_mean(alpha*model['logp_pi'] - min_q_pi)
+    pi_loss = tf.reduce_mean(alpha_pi*model['logp_pi'] - min_q_pi)
     q1_loss = 0.5 * tf.reduce_mean((q_backup - model['q1'])**2)
     q2_loss = 0.5 * tf.reduce_mean((q_backup - model['q2'])**2)
     value_loss = q1_loss + q2_loss
