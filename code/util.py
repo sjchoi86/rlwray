@@ -66,6 +66,11 @@ def toc(toc_str=None):
         (toc_str,t_elapsed_sec))
         
 def open_txt(txt_path):
+    # Create folder if not exist
+    dir_name = os.path.dirname(txt_path)
+    if not os.path.exists(dir_name):
+        os.makedirs(dir_name)
+        print ("[%s] created."%(dir_name))
     f = open(txt_path,'w') # Open txt file
     return f
         
