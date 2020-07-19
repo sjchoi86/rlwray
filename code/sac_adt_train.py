@@ -16,7 +16,10 @@ def train(expname='sac_adt_cont',n_cpu=30,n_workers=30,
           action_length=5,action_length_eval=5,
           ep_len_rollout=10*150,
           hdims=[128,128],actv=tf.nn.relu,
-          red_list=[Agents.SPOT_RANDOM,Agents.EXPERT_SYSTEM]*5,
+          red_list_train = {Agents.SPOT_4G: 0.15,Agents.SPOT_5G: 0.30,Agents.SPOT_RANDOM: 0.45,
+                            Agents.EXPERT_SYSTEM_TRIAL_2: 0.6,Agents.EXPERT_SYSTEM_TRIAL_3_SCRIMMAGE_4: 0.75,
+                            Agents.EXPERT_SYSTEM: 1.0},
+          red_list_eval=[Agents.SPOT_RANDOM,Agents.EXPERT_SYSTEM]*5,
           num_eval=5,max_ep_len_eval=15e3,
           batch_size=2**12,update_count=500,
           lr=1e-4,epsilon=1e-5,
@@ -25,7 +28,9 @@ def train(expname='sac_adt_cont',n_cpu=30,n_workers=30,
           temp_min=1.0,temp_max=1.0,eps_greedy=0.0,
           txt_path='../log/sac_adt_cont/log_time.txt',
           npz_path_restore=''):
-    
+    """
+    Train SAC model 
+    """
     
     # Logger
     print (txt_path)
@@ -37,14 +42,7 @@ def train(expname='sac_adt_cont',n_cpu=30,n_workers=30,
     def get_env():
         from episci.environment_wrappers.tactical_action_adt_env_continuous import CustomADTEnvContinuous
         from episci.agents.utils.constants import Agents, RewardType
-        red_distribution = {
-            Agents.SPOT_4G: 0.15,
-            Agents.SPOT_5G: 0.30,
-            Agents.SPOT_RANDOM: 0.45,
-            Agents.EXPERT_SYSTEM_TRIAL_2: 0.6,
-            Agents.EXPERT_SYSTEM_TRIAL_3_SCRIMMAGE_4: 0.75,
-            Agents.EXPERT_SYSTEM: 1.0
-        }
+        red_distribution = red_list_train
         env_config = {
             "red_distribution": red_distribution,
             "reward_type": RewardType.SHAPED
@@ -54,14 +52,7 @@ def train(expname='sac_adt_cont',n_cpu=30,n_workers=30,
     def get_eval_env():
         from episci.environment_wrappers.tactical_action_adt_env_continuous import CustomADTEnvContinuous
         from episci.agents.utils.constants import Agents, RewardType
-        red_distribution = {
-            Agents.SPOT_4G: 0.15,
-            Agents.SPOT_5G: 0.30,
-            Agents.SPOT_RANDOM: 0.45,
-            Agents.EXPERT_SYSTEM_TRIAL_2: 0.6,
-            Agents.EXPERT_SYSTEM_TRIAL_3_SCRIMMAGE_4: 0.75,
-            Agents.EXPERT_SYSTEM: 1.0
-        }
+        red_distribution = red_list_train
         env_config = {
             "red_distribution": red_distribution,
             "reward_type": RewardType.SHAPED
@@ -96,6 +87,7 @@ def train(expname='sac_adt_cont',n_cpu=30,n_workers=30,
                                  polyak=polyak,epsilon=epsilon)
 
             # Initialize model 
+            self.FIRST_SET_FLAG = True
             tf.set_random_seed(self.seed)
             np.random.seed(self.seed)
             self.sess.run(tf.global_variables_initializer())
@@ -111,6 +103,25 @@ def train(expname='sac_adt_cont',n_cpu=30,n_workers=30,
             """
             weight_vals = self.sess.run(self.model['main_vars'])
             return weight_vals
+        
+        def set_weights(self,weight_vals):
+            """
+            Set weights without memory leakage
+            """
+            if self.FIRST_SET_FLAG:
+                self.FIRST_SET_FLAG = False
+                self.assign_placeholders = []
+                self.assign_ops = []
+                for w_idx,weight_tf_var in enumerate(self.model['main_vars']):
+                    a = weight_tf_var
+                    assign_placeholder = tf.placeholder(a.dtype, shape=a.get_shape())
+                    assign_op = a.assign(assign_placeholder)
+                    self.assign_placeholders.append(assign_placeholder)
+                    self.assign_ops.append(assign_op)
+            for w_idx,weight_tf_var in enumerate(self.model['main_vars']):
+                # Memory-leakage-free assign (hopefully)
+                self.sess.run(self.assign_ops[w_idx],
+                              {self.assign_placeholders[w_idx]:weight_vals[w_idx]})
 
     @ray.remote
     class RayRolloutWorkerClass(object):
@@ -298,7 +309,7 @@ def train(expname='sac_adt_cont',n_cpu=30,n_workers=30,
         sec_rollout = time.time() - t_start
 
         # Burnin
-        if t <= burnin_steps:
+        if t < burnin_steps:
             continue
 
         # Update
@@ -349,12 +360,12 @@ def train(expname='sac_adt_cont',n_cpu=30,n_workers=30,
                       ADD_NEWLINE=True,DO_PRINT=False)
             ops = []
             for i_idx in range(num_eval):
-                worker,red = workers[i_idx],red_list[i_idx]
+                worker,red = workers[i_idx],red_list_eval[i_idx]
                 ops.append(worker.evaluate.remote(red=red))
             eval_vals = ray.get(ops)
             ep_ret_sum = 0
             for i_idx in range(num_eval):
-                red,eval_val = red_list[i_idx],eval_vals[i_idx]
+                red,eval_val = red_list_eval[i_idx],eval_vals[i_idx]
                 ep_ret,ep_len,blue_health,red_health = eval_val[0],eval_val[1],eval_val[2],eval_val[3]
                 ep_ret_sum += ep_ret
                 print (" [%d/%d] [%s] ep_ret:[%.4f] ep_len:[%d]. blue health:[%.2f] red health:[%.2f]"
