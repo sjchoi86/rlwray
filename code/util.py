@@ -114,7 +114,7 @@ def arr2idx(arr,md_info):
     """
     n = md_info.shape[0]
     idx = 0
-    multiplies = np.concatenate((np.flip(np.cumprod(np.flip(md_info[:-1]))),np.array([1])))
+    multiplies = np.concatenate((np.flip(np.cumprod(np.flip(md_info[1:]))),np.array([1])))
     for d_idx in range(n):
         idx = idx + arr[d_idx]*multiplies[d_idx]
     return idx
@@ -125,7 +125,7 @@ def idx2arr(idx,md_info):
     """
     n = md_info.shape[0]
     arr = np.zeros(n)
-    multiplies = np.concatenate((np.flip(np.cumprod(np.flip(md_info[:-1]))),np.array([1])))
+    multiplies = np.concatenate((np.flip(np.cumprod(np.flip(md_info[1:]))),np.array([1])))
     for d_idx in range(n):
         temp = idx // multiplies[d_idx]
         arr[d_idx] = temp
