@@ -1,3 +1,4 @@
+import os,ray
 import numpy as np
 import tensorflow as tf
 from util import gpu_sess,suppress_tf_warning
