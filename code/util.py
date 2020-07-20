@@ -82,10 +82,8 @@ def write_txt(f,chars,ADD_NEWLINE=True,DO_PRINT=True):
         f.write(chars+'\n')
     else: 
         f.write(chars)
-        
     f.flush()
     os.fsync(f.fileno()) # Write to txt
-    
     if DO_PRINT:
         print (chars)
 
@@ -98,17 +96,39 @@ class OnlineMeanVariance(object):
         if iterable is not None:
             for datum in iterable:
                 self.include(datum)
-
     def include(self, datum):
         self.n += 1
         self.delta = datum - self.mean
         self.mean += self.delta / self.n
         self.M2 += self.delta * (datum - self.mean)
-
     @property
     def variance(self):
         return self.M2 / (self.n - self.ddof)
-
     @property
     def std(self):
-        return np.sqrt(self.variance)
+        return np.sqrt(self.variance) 
+    
+def arr2idx(arr,md_info):
+    """
+    Multi-Discrete Array to Index
+    """
+    n = md_info.shape[0]
+    idx = 0
+    multiplies = np.concatenate((np.flip(np.cumprod(np.flip(md_info[:-1]))),np.array([1])))
+    for d_idx in range(n):
+        idx = idx + arr[d_idx]*multiplies[d_idx]
+    return idx
+    
+def idx2arr(idx,md_info):
+    """
+    Index to Multi-Discrete Arrary
+    """
+    n = md_info.shape[0]
+    arr = np.zeros(n)
+    multiplies = np.concatenate((np.flip(np.cumprod(np.flip(md_info[:-1]))),np.array([1])))
+    for d_idx in range(n):
+        temp = idx // multiplies[d_idx]
+        arr[d_idx] = temp
+        idx = idx - temp*multiplies[d_idx]
+    return arr.astype(np.int)
+
