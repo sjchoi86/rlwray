@@ -101,6 +101,11 @@ class OnlineMeanVariance(object):
         self.delta = datum - self.mean
         self.mean += self.delta / self.n
         self.M2 += self.delta * (datum - self.mean)
+    def restore(self,ddof,n,mean,M2):
+        self.ddof = ddof
+        self.n = n
+        self.mean = mean
+        self.M2 = M2
     @property
     def variance(self):
         return self.M2 / (self.n - self.ddof)

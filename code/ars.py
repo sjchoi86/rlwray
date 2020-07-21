@@ -57,9 +57,9 @@ def get_noises_from_weights(weights,nu=0.01):
     return noises
 
 
-def save_ars_model(npz_path,R,VERBOSE=True):
+def save_ars_model(npz_path,R,mv=None,VERBOSE=True):
     """
-    Save ARS model weights 
+    Save ARS model weights
     """
     # ARS model
     tf_vars = R.model['main_vars'] 
@@ -72,7 +72,15 @@ def save_ars_model(npz_path,R,VERBOSE=True):
         if VERBOSE:
             print ("[%02d]  var_name:[%s]  var_shape:%s"%
                 (v_idx,var_name,var_val.shape,)) 
-    
+            
+    # Mean and std of observation
+    if mv:
+        ddof,n,mean,M2 = mv.ddof,mv.n,mv.mean,mv.M2
+        data2save['ddof'] = ddof
+        data2save['n'] = n
+        data2save['mean'] = mean
+        data2save['M2'] = M2
+        
     # Create folder if not exist
     dir_name = os.path.dirname(npz_path)
     if not os.path.exists(dir_name):
@@ -83,7 +91,7 @@ def save_ars_model(npz_path,R,VERBOSE=True):
     np.savez(npz_path,**data2save)
     print ("[%s] saved."%(npz_path))
     
-def restore_ars_model(npz_path,R,VERBOSE=True):
+def restore_ars_model(npz_path,R,mv=None,VERBOSE=True):
     """
     Restore SAC model weights and replay buffers
     """
@@ -96,6 +104,10 @@ def restore_ars_model(npz_path,R,VERBOSE=True):
     var_vals = []
     for tf_var in tf_vars:
         var_vals.append(l[tf_var.name])   
+        
+    # Mean and std of observation
+    if mv:
+        mv.restore(ddof=l['ddof'],n=l['n'],mean=l['mean'],M2=l['M2'])
         
     # Assign weights of ARS model
     R.set_weights(var_vals)
