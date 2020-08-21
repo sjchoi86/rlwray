@@ -55,6 +55,7 @@ def create_sac_model(odim=10,adim=2,hdims=[256,256],actv=tf.nn.relu):
     
     def mlp(x,hdims=[256,256],actv=tf.nn.relu,out_actv=tf.nn.relu):
         ki = tf.truncated_normal_initializer(stddev=0.1)
+        # ki = tf.glorot_normal_initializer()
         for hdim in hdims[:-1]:
             x = tf.layers.dense(x,units=hdim,activation=actv,kernel_initializer=ki)
         return tf.layers.dense(x,units=hdims[-1],activation=out_actv,kernel_initializer=ki)
@@ -71,7 +72,8 @@ def create_sac_model(odim=10,adim=2,hdims=[256,256],actv=tf.nn.relu):
         log_std = tf.layers.dense(net,adim,activation=None) # log_std
         LOG_STD_MIN,LOG_STD_MAX = -10.0,+2.0
         log_std = tf.clip_by_value(log_std, LOG_STD_MIN, LOG_STD_MAX) 
-        std = tf.exp(log_std) # std 
+        # std = tf.exp(log_std) # std 
+        std = tf.sigmoid(log_std) # std 
         pi = mu + tf.random_normal(tf.shape(mu)) * std  # sampled
         logp_pi = gaussian_loglik(x=pi,mu=mu,log_std=log_std) # log lik
         return mu,pi,logp_pi
@@ -194,7 +196,7 @@ def save_sac_model_and_buffers(npz_path,R,replay_buffer_long,replay_buffer_short
     """
     
     # SAC model
-    tf_vars = R.model['main_vars'] + R.model['target_vars']
+    tf_vars = R.model['target_vars'] + R.model['main_vars']
     data2save,var_names,var_vals = dict(),[],[]
     for v_idx,tf_var in enumerate(tf_vars):
         var_name,var_val = tf_var.name,R.sess.run(tf_var)
@@ -236,7 +238,7 @@ def restore_sac_model_and_buffers(npz_path,R,replay_buffer_long,replay_buffer_sh
     print ("[%s] loaded."%(npz_path))
     
     # Get values of SAC model  
-    tf_vars = R.model['main_vars'] + R.model['target_vars']
+    tf_vars = R.model['target_vars'] + R.model['main_vars']
     var_vals = []
     for tf_var in tf_vars:
         var_vals.append(l[tf_var.name])   
